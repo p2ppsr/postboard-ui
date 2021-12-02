@@ -1,6 +1,6 @@
-# Tutorial: Using Action Protocols
+# Ty's Postboard UI
 
-This is the companion codebase for the [Using Action Protocols](https://projectbabbage.com/using-action-protocols) tutorial.
+This is the UI codebase for the [Creating Action Protocols](https://projectbabbage.com/creating-action-protocols) tutorial.
 
 ## Setup
 
