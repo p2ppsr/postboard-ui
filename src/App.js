@@ -10,7 +10,7 @@ import 'react-toastify/dist/ReactToastify.css'
 import {
   AppBar, Toolbar, List, ListItem, ListItemText, ListItemIcon, Checkbox, Dialog,
   DialogTitle, DialogContent, DialogContentText, DialogActions, TextField,
-  Button, Fab, LinearProgress, Typography, IconButton
+  Button, Fab, LinearProgress, Typography, IconButton, Card, CardContent, CardActions
 } from '@mui/material'
 import { makeStyles } from '@mui/styles'
 import AddIcon from '@mui/icons-material/Add'
@@ -23,15 +23,8 @@ import {
 import { Authrite } from 'authrite-js'
 import PacketPay from '@packetpay/js'
 
-// This is the namespace address for the ToDo protocol
-// You can create your own Bitcoin address to use, and customize this protocol
-// for your own needs.
+// This is the namespace prefix for the Postboard protocol
 const POSTBOARD_PREFIX = 'postboard'
-
-const POST = {
-  protocol: 0,
-  post: 1
-}
 
 // These are some basic styling rules for the React application.
 // This app uses React (https://reactjs.org) for its user interface.
@@ -73,8 +66,9 @@ const App = () => {
   const [createLoading, setCreateLoading] = useState(false)
   const [postsLoading, setPostsLoading] = useState(true)
   const [posts, setPosts] = useState([])
-  const [completeOpen, setCompleteOpen] = useState(false)
+  const [tippingOpen, setTippingOpen] = useState(false)
   const [selectedPost, setSelectedPost] = useState({})
+  const [tipAmount, setTipAmount] = useState(3301)
   const [tipLoading, setTipLoading] = useState(false)
   const classes = useStyles()
 
@@ -151,13 +145,7 @@ const App = () => {
       toast.dark('Post successfully created!')
       setPosts(originalPosts => ([
         {
-          post: createPost,
-          sats: Number(createAmount),
-          token: {
-            ...newPostboardToken,
-            lockingScript: bitcoinOutputScript,
-            outputIndex: 0
-          }
+          post: createPost
         },
         ...originalPosts
       ]))
@@ -173,77 +161,9 @@ const App = () => {
     }
   }
 
-  // Redeems the ToDo toeken, marking the selected task as completed.
-  // This function runs when the user clicks the "complete" button on the 
-  // completion dialog.
-  const handleCompleteSubmit = async e => {
-    e.preventDefault() // Stop the HTML form from reloading the page.
-    try {
-      // Start a loading bar to let the user know we're working on it.
-      setTipLoading(true)
-
-      // Here, we're using the PushDrop library to unlcok / redeem the PushDrop 
-      // token that was previously created. By providing this information, 
-      // PushDrop can "unlock" and spend the token. When the token gets spent, 
-      // the user gets their bitcoins back, and the ToDo token is removed from 
-      // the list.
-      const unlockingScript = await pushdrop.redeem({
-        // To unlock the token, we need to use the same "todo list" protocolID 
-        // and keyID as when we created the ToDo token before. Otherwise, the 
-        // key won't fit the lock and the Bitcoins won't come out.
-        protocolID: 'todo list',
-        keyID: '1',
-        // We're telling PushDrop which previous transaction and output we want 
-        // to unlock, so that the correct unlocking puzzle can be prepared.
-        prevTxId: selectedPost.token.txid,
-        outputIndex: selectedPost.token.outputIndex,
-        // We also give PushDrop a copy of the locking puzzle ("script") that 
-        // we want to open, which is helpful in preparing to unlock it.
-        lockingScript: selectedPost.token.lockingScript,
-        // Finally, the amount of Bitcoins we are expecting to unlock when the 
-        // puzzle gets solved.
-        outputAmount: selectedPost.sats
-      })
-
-      // Now, we're going to use the unlocking puzle that PushDrop has prepared 
-      // for us, so that the user can get their Bitcoins back.This is another 
-      // "Action", which is just a Bitcoin transaction.
-      await createAction({
-        // Let the user know what's going on, and why they're getting some 
-        // Bitcoins back.
-        description: `Complete a TODO task: "${selectedPost.task}"`,
-        inputs: { // These are inputs, which unlock Bitcoin tokens.
-          // The input comes from the previous ToDo token, which we're now 
-          // completing, redeeming and spending.
-          [selectedPost.token.txid]: {
-            ...selectedPost.token,
-            // The output we want to redeem is specified here, and we also give 
-            // the unlocking puzzle ("script") from PushDrop.
-            outputsToRedeem: [{
-              index: selectedPost.token.outputIndex,
-              unlockingScript,
-              // Spending descriptions tell the user why this input was redeemed
-              spendingDescription: 'Complete a ToDo list item'
-            }]
-          }
-        }
-      })
-      // Finally, we let the user know about the good news, and that their  
-      // completed ToDo token has been removed from their list! The satoshis 
-      // have now been unlocked, and are back in their posession.
-      toast.dark('Congrats! Task complete🎉')
-      setPosts(oldTasks => {
-        oldTasks.splice(oldTasks.findIndex(x => x === selectedPost), 1)
-        return oldTasks
-      })
-      setSelectedPost({})
-      setCompleteOpen(false)
-    } catch (e) {
-      toast.error(`Error completing task: ${e.message}`)
-      console.error(e)
-    } finally {
-      setTipLoading(false)
-    }
+  const handleTipSubmit = e => {
+    e.preventDefault()
+    // submit tip
   }
 
   // This loads a user's existing ToDo tokens from their token basket 
@@ -303,9 +223,9 @@ const App = () => {
   // ----------
 
   // Opens the completion dialog for the selected task
-  const openCompleteModal = task => () => {
-    setSelectedPost(task)
-    setCompleteOpen(true)
+  const openTippingModal = post => () => {
+    setSelectedPost(post)
+    setTippingOpen(true)
   }
 
   return (
@@ -317,13 +237,13 @@ const App = () => {
       <AppBar>
         <Toolbar>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            ToDo List — Get Rewarded!
+            Postboard — Share thoughts!
           </Typography>
           <IconButton
             size='large'
             color='inherit'
             onClick={() => {
-              window.open('https://github.com/p2ppsr/todo-react', '_blank')
+              window.open('https://github.com/p2ppsr/postboard-ui', '_blank')
             }}
           >
             <GitHubIcon />
@@ -346,30 +266,29 @@ const App = () => {
           <List>
             {posts.length === 0 && (
               <div className={classes.no_items}>
-                <Typography variant='h4'>No ToDo Items</Typography>
+                <Typography variant='h4'>No Posts</Typography>
                 <Typography color='textSecondary'>
-                  Use the<AddIcon color='primary' />button below to start a task
+                  Use the<AddIcon color='primary' />button below to start a post
                 </Typography>
               </div>
             )}
             {posts.map((x, i) => (
-              <ListItem
+              <Card
                 key={i}
-                button
-                onClick={openCompleteModal(x)}
               >
-                <ListItemIcon><Checkbox checked={false} /></ListItemIcon>
-                <ListItemText
-                  primary={x.post}
-                  secondary={`${x.sats} satoshis`}
-                />
-              </ListItem>
+                <CardContent>
+                  <Typography>{x.post}</Typography>
+                </CardContent>
+                <CardActions>
+                  <Button onClick={openTippingModal(x)}>Tip</Button>
+                </CardActions>
+              </Card>
             ))}
           </List>
         )}
 
       {/* This is the dialog for creating a new task */}
-      <Dialog open={createOpen} onClose={() => setCreateOpen(false)}>
+      <Dialog open={createOpen} onClose={() => setCreateOpen(false)} fullWidth>
         <form onSubmit={handleCreateSubmit}>
           <DialogTitle>
             Create a Post
@@ -379,8 +298,8 @@ const App = () => {
               Enter the post you'd like to make:
             </DialogContentText>
             <TextField
-              multiline rows={3} fullWidth autoFocus
-              label='Task to complete'
+              multiline rows={5} fullWidth autoFocus
+              label='Write a post'
               onChange={e => setCreatePost(e.target.value)}
               value={createPost}
             />
@@ -396,23 +315,29 @@ const App = () => {
         </form>
       </Dialog>
 
-      {/* Finally, this is the dialog for completing a ToDo task */}
-      <Dialog open={completeOpen} onClose={() => setCompleteOpen(false)}>
-        <form onSubmit={handleCompleteSubmit}>
+      {/* Finally, this is the dialog for sending a tip to a post */}
+      <Dialog open={tippingOpen} onClose={() => setTippingOpen(false)}>
+        <form onSubmit={handleTipSubmit}>
           <DialogTitle>
-            Complete "{selectedPost.task}"?
+            Send a Tip
           </DialogTitle>
           <DialogContent>
             <DialogContentText paragraph>
-              By marking this task as complete, you'll receive back your {selectedPost.sats} satoshis.
+              Enter the amount of satoshis you'd like to reward the creator with:
             </DialogContentText>
+            <TextField
+              type='number'
+              value={tipAmount}
+              onChange={e => setTipAmount(e.target.value)}
+              label='Amount (satoshis)'
+            />
           </DialogContent>
           {tipLoading
             ? <LinearProgress className={classes.loading_bar} />
             : (
             <DialogActions>
-              <Button onClick={() => setCompleteOpen(false)}>Cancel</Button>
-              <Button type='submit'>Complete Task</Button>
+              <Button onClick={() => setTippingOpen(false)}>Cancel</Button>
+              <Button type='submit'>Send Tip</Button>
             </DialogActions>
           )}
         </form>

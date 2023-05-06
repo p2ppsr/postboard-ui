@@ -15,7 +15,6 @@ Script Element | Meaning
 0	             | `<pubkey>`
 1	             | `OP_CHECKSIG`
 2	             | Postboard Protocol prefix (`postboard`)
-3	             | identity key of the poster (33-byte DER-encoded X coordinate)
 4	             | The message that is being posted
 5              | Digital signature over fields 2-4 from the field 0 public key
 …              |	`OP_DROP` / `OP_2DROP` — Drop fields 2-5 from the stack
