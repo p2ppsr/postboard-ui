@@ -22,6 +22,7 @@ import {
 } from '@babbage/sdk'
 import { Authrite } from 'authrite-js'
 import PacketPay from '@packetpay/js'
+import { getPaymentAddress } from 'sendover'
 
 // This is the namespace prefix for the Postboard protocol
 const POSTBOARD_PREFIX = 'postboard'
@@ -85,6 +86,8 @@ const App = () => {
       // Now, we start a loading bar before the encryption and heavy lifting.
       setCreateLoading(true)
     
+      const identityKey = await getPublicKey({ identityKey: true })
+
       // Here's the part where we create the new Bitcoin token.
       // This uses a library called PushDrop, which lets you attach data 
       // payloads to Bitcoin token outputs. Then, you can redeem / unlock the 
@@ -95,12 +98,14 @@ const App = () => {
           // (PROTOCOL.md). Note that the PushDrop library handles the public 
           // key, signature, and OP_DROP fields automatically.
           Buffer.from(POSTBOARD_PREFIX), // Postboard protocol namespace address
+          Buffer.from(identityKey, 'hex'),
           Buffer.from(createPost)    // Postboard post
         ],
         // The same "todo list" protocol and key ID can be used to sign and 
         // lock this new Bitcoin PushDrop token.
         protocolID: 'postboard',
-        keyID: '1'
+        keyID: '1',
+        counterparty: 'anyone'
       })
 
       // Now that we have the output script for our ToDo Bitcoin token, we can 
@@ -197,11 +202,22 @@ const App = () => {
                   // eslint-disable-next-line no-undef
                   script: lookupResult[i].outputScript,
                   fieldFormat: 'buffer'
-                })
+            })
+            // validate key linkage
+            // decoded.fields[1] and decoded.lockingPublicKey
+            const expected = getPaymentAddress({
+              senderPrivateKey: '0000000000000000000000000000000000000000000000000000000000000001',
+              recipientPublicKey: decoded.fields[1],
+              returnType: 'publicKey',
+              invoiceNumber: '2-postboard-1'
+            })
+            if (expected !== decoded.lockingPublicKey) {
+              continue
+            }
+
             decodedResults.push({
-              post: decoded.fields[1].toString('utf8'),
-              identityKey: decoded.lockingPublicKey,
-              ...lookupResult[i]
+              post: decoded.fields[2].toString('utf8'),
+              identityKey: decoded.fields[1].toString('hex'),
             })
           }
         setPosts(decodedResults)
