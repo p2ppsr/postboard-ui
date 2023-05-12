@@ -25,6 +25,23 @@ import PacketPay from '@packetpay/js'
 import { getPaymentAddress } from 'sendover'
 import PaymentTokenator from 'payment-tokenator'
 
+const ENV = window.location.host.includes('localhost')
+  ? 'dev'
+  : window.location.host.includes('staging')
+    ? 'staging'
+    : 'prod'
+
+const confederacyHost = ENV === 'dev'
+  ? 'http://localhost:3103' :
+  ENV === 'staging'
+    ? 'https://staging-confederacy.babbage.systems'
+    : 'https://confederacy.babbage.systems'
+const peerServHost = ENV === 'dev'
+  ? 'http://localhost:3106' :
+  ENV === 'staging'
+    ? 'https://staging-peerserv.babbage.systems'
+    : 'https://peerserv.babbage.systems'
+
 // This is the namespace prefix for the Postboard protocol
 const POSTBOARD_PREFIX = 'postboard'
 
@@ -137,7 +154,7 @@ const App = () => {
 
       // Notify overlay about transaction
       await new Authrite().request(
-        `http://localhost:3103/submit`,
+        `${confederacyHost}/submit`,
         {
           method: 'POST',
           body: {
@@ -173,7 +190,7 @@ const App = () => {
     // Create a new instance of the PaymentTokenator class
     // Optionally configure a custom peerServHost
     const tokenator = new PaymentTokenator({
-        peerServHost: 'https://staging-peerserv.babbage.systems'
+        peerServHost
     })
     // Send a payment using Babbage
     await tokenator.sendPayment({
@@ -191,7 +208,7 @@ const App = () => {
     (async () => {
       try {
         // Use Confederacy UHRP lookup service
-        const response = await PacketPay(`http://localhost:3103/lookup`, {
+        const response = await PacketPay(`${confederacyHost}/lookup`, {
           method: 'POST',
           body: {
             provider: 'Postboard',
@@ -236,7 +253,7 @@ const App = () => {
         setPosts(decodedResults)
 
         const tokenator = new PaymentTokenator({
-        peerServHost: 'https://staging-peerserv.babbage.systems'
+        peerServHost
         })
         const payments = await tokenator.listIncomingPayments()
         for (const payment of payments) {
