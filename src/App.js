@@ -23,6 +23,7 @@ import {
 import { Authrite } from 'authrite-js'
 import PacketPay from '@packetpay/js'
 import { getPaymentAddress } from 'sendover'
+import PaymentTokenator from 'payment-tokenator'
 
 // This is the namespace prefix for the Postboard protocol
 const POSTBOARD_PREFIX = 'postboard'
@@ -105,7 +106,8 @@ const App = () => {
         // lock this new Bitcoin PushDrop token.
         protocolID: 'postboard',
         keyID: '1',
-        counterparty: 'anyone'
+        counterparty: 'anyone',
+        ownedByCreator: true
       })
 
       // Now that we have the output script for our ToDo Bitcoin token, we can 
@@ -166,9 +168,20 @@ const App = () => {
     }
   }
 
-  const handleTipSubmit = e => {
+  const handleTipSubmit = async e => {
     e.preventDefault()
-    // submit tip
+    // Create a new instance of the PaymentTokenator class
+    // Optionally configure a custom peerServHost
+    const tokenator = new PaymentTokenator({
+        peerServHost: 'https://staging-peerserv.babbage.systems'
+    })
+    // Send a payment using Babbage
+    await tokenator.sendPayment({
+        recipient: selectedPost.identityKey,
+        amount: tipAmount
+    })
+    toast.success('Tip sent!')
+    setTippingOpen(false)
   }
 
   // This loads a user's existing ToDo tokens from their token basket 
@@ -207,7 +220,7 @@ const App = () => {
             // decoded.fields[1] and decoded.lockingPublicKey
             const expected = getPaymentAddress({
               senderPrivateKey: '0000000000000000000000000000000000000000000000000000000000000001',
-              recipientPublicKey: decoded.fields[1],
+              recipientPublicKey: decoded.fields[1].toString('hex'),
               returnType: 'publicKey',
               invoiceNumber: '2-postboard-1'
             })
@@ -221,6 +234,17 @@ const App = () => {
             })
           }
         setPosts(decodedResults)
+
+        const tokenator = new PaymentTokenator({
+        peerServHost: 'https://staging-peerserv.babbage.systems'
+        })
+        const payments = await tokenator.listIncomingPayments()
+        for (const payment of payments) {
+          console.log('processing', payment)
+          await tokenator.acceptPayment(payment)
+          toast.success(`Received a ${payment.token.amount} satoshi tip!`)
+        }
+
       } catch (e) {
         // Any larger errors are also handled. If these steps fail, maybe the 
         // useer didn't give our app the right permissions, and we couldn't use 
