@@ -95,14 +95,14 @@ const App = () => {
       // tokens later.
       const bitcoinOutputScript = await pushdrop.create({
         fields: [ // The "fields" are the data payload to attach to the token.
-          // For more info on these fields, look at the ToDo protocol document 
+          // For more info on these fields, look at the Postboard protocol document 
           // (PROTOCOL.md). Note that the PushDrop library handles the public 
           // key, signature, and OP_DROP fields automatically.
           Buffer.from(POSTBOARD_PREFIX), // Postboard protocol namespace address
           Buffer.from(identityKey, 'hex'),
           Buffer.from(createPost)    // Postboard post
         ],
-        // The same "todo list" protocol and key ID can be used to sign and 
+        // The same "postboard" protocol and key ID can be used to sign and 
         // lock this new Bitcoin PushDrop token.
         protocolID: 'postboard',
         keyID: '1',
@@ -110,7 +110,7 @@ const App = () => {
         ownedByCreator: true
       })
 
-      // Now that we have the output script for our ToDo Bitcoin token, we can 
+      // Now that we have the output script for our Postboard Bitcoin token, we can 
       // add it to a Bitcoin transaction (a.k.a. "Action"), and register the 
       // new token with the blockchain. On the MetaNet, Actions are anything 
       // that a user does, and all Actions take the form of Bitcoin 
@@ -118,7 +118,7 @@ const App = () => {
       const newPostboardToken = await createAction({
         // This Bitcoin transaction ("Action" with a capital A) has one output, 
         // because it has led to the creation of a new Bitcoin token. The token 
-        // that gets created represents our new ToDo list item.
+        // that gets created represents our new postboard item.
         outputs: [{
           // The output amount is how much Bitcoin (measured in "satoshis") 
           // this token is worth. We use the value that the user entered in the 
@@ -132,7 +132,7 @@ const App = () => {
         }],
         // Describe the Actions that your app facilitates, in the present 
         // tense, for the user's future reference.
-        description: `Create a TODO task: ${createPost}`
+        description: 'Create a Postboard post'
       })
 
       // Notify overlay about transaction
@@ -184,8 +184,8 @@ const App = () => {
     setTippingOpen(false)
   }
 
-  // This loads a user's existing ToDo tokens from their token basket 
-  // whenever the page loads. This populates their ToDo list.
+  // This loads the existing postboard tokens from the overlay network
+  // whenever the page loads. This populates their post list.
   // A basket is just a way to keep track of different kinds of Bitcoin tokens.
   useEffect(() => {
     (async () => {
@@ -248,8 +248,8 @@ const App = () => {
       } catch (e) {
         // Any larger errors are also handled. If these steps fail, maybe the 
         // useer didn't give our app the right permissions, and we couldn't use 
-        // the "todo list" protocol.
-        toast.error(`Failed to load ToDo tasks! Does the app have permission? Error: ${e.message}`)
+        // the "postboard" protocol.
+        toast.error(`Failed to load posts! Does the app have permission? Error: ${e.message}`)
         console.error(e)
       } finally {
         setPostsLoading(false)
