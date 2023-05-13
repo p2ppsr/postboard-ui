@@ -25,11 +25,11 @@ import PacketPay from '@packetpay/js'
 import { getPaymentAddress } from 'sendover'
 import PaymentTokenator from 'payment-tokenator'
 
-const ENV = window.location.host.includes('localhost')
-  ? 'dev'
-  : window.location.host.includes('staging')
-    ? 'staging'
-    : 'prod'
+let ENV = 'staging'
+
+if (window.location.host === 'postboard.babbage.systems') {
+  ENV = 'prod'
+}
 
 const confederacyHost = ENV === 'dev'
   ? 'http://localhost:3103' :
